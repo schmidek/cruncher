@@ -1,0 +1,24 @@
+[package]
+name = "cruncher"
+version = "0.1.0"
+authors = ["Mika Sanchez <keyneom122@hotmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "tbd"
+homepage = "tbd"
+documentation = "tbd"
+description = """
+jit-compiled mathematical expression calculator
+"""
+edition = "2018"
+
+[dependencies]
+libm = ""
+lazy_static = "^1"
+cranelift = "^0.*"
+cranelift-module = "0.*"
+cranelift-simplejit = "0.*"
+# cranelift = "^0.26"
+# cranelift-module = "^0.26"
+# cranelift-simplejit = "^0.26"
+hashbrown = "^0.1"
