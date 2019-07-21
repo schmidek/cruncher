@@ -81,8 +81,8 @@ extern crate lazy_static;
 
 mod ast;
 mod error;
-mod expr;
-mod jit;
+pub mod expr;
+pub mod jit;
 mod lexer;
 mod token;
 mod util;

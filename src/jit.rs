@@ -34,15 +34,14 @@ pub struct JIT {
     required_parameters: HashMap<String, usize>,
 }
 
-impl JIT {
-    /// Create a new `JIT` instance.
-    pub fn new() -> Self {
+impl Default for JIT {
+    fn default() -> Self {
         // Windows calling conventions are not supported yet.
         if cfg!(windows) {
             unimplemented!();
         }
 
-        let mut builder = SimpleJITBuilder::new();
+        let mut builder = SimpleJITBuilder::new(cranelift_module::default_libcall_names());
         let s = builder.symbol(POW, pow as *const u8);
         let module = Module::new(builder);
         Self {
@@ -53,12 +52,19 @@ impl JIT {
             required_parameters: HashMap::new(),
         }
     }
+}
+
+impl JIT {
+    /// Create a new `JIT` instance.
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Compile a string in the toy language into machine code.
     pub fn compile(
         &mut self,
         input: &str,
-    ) -> Result<Box<Fn(HashMap<String, Vec<f64>>, usize) -> Vec<f64>>, String> {
+    ) -> Result<Box<dyn Fn(HashMap<String, &[f64]>, usize) -> Vec<f64>>, String> {
         // First, parse the string, producing AST nodes.
         // let (name, params, the_return, stmts) =
         //     parser::function(&input).map_err(|e| e.to_string())?;
@@ -67,7 +73,7 @@ impl JIT {
             .map_err(|e| e.to_string())?;
 
         // Then, translate the AST nodes into Cranelift IR.
-        self.translate(ast).map_err(|e| e.to_string())?;
+        self.translate(&ast).map_err(|e| e.to_string())?;
 
         // Next, declare the function to simplejit. Functions must be declared
         // before they can be called, or defined.
@@ -109,13 +115,13 @@ impl JIT {
     fn dynamic_param_fn(
         function: *const u8,
         required_parameters: HashMap<String, usize>,
-    ) -> Box<Fn(HashMap<String, Vec<f64>>, usize) -> Vec<f64>> {
+    ) -> Box<dyn Fn(HashMap<String, &[f64]>, usize) -> Vec<f64>> {
         // FIXME: Make a macro that will define these for us, maybe up to 256 params
         match required_parameters.len() {
             0 => {
                 let function = unsafe { mem::transmute::<_, fn() -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, Vec<f64>>, number_of_evaluations: usize| {
+                    move |_params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
                         for i in 0..number_of_evaluations {
                             results.push(function());
@@ -128,7 +134,7 @@ impl JIT {
             1 => {
                 let function = unsafe { mem::transmute::<_, fn(f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, Vec<f64>>, number_of_evaluations: usize| {
+                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let keys = required_parameters.keys();
 
                         let mut sorted_keys = vec![];
@@ -150,7 +156,7 @@ impl JIT {
             2 => {
                 let function = unsafe { mem::transmute::<_, fn(f64, f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, Vec<f64>>, number_of_evaluations: usize| {
+                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let keys = required_parameters.keys();
 
                         let mut sorted_keys = vec![];
@@ -173,7 +179,7 @@ impl JIT {
             3 => {
                 let function = unsafe { mem::transmute::<_, fn(f64, f64, f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, Vec<f64>>, number_of_evaluations: usize| {
+                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let keys = required_parameters.keys();
 
                         let mut sorted_keys = vec![];
@@ -198,7 +204,7 @@ impl JIT {
                 let function =
                     unsafe { mem::transmute::<_, fn(f64, f64, f64, f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, Vec<f64>>, number_of_evaluations: usize| {
+                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let keys = required_parameters.keys();
 
                         let mut sorted_keys = vec![];
@@ -231,7 +237,7 @@ impl JIT {
         self.data_ctx.define(contents.into_boxed_slice());
         let id = self
             .module
-            .declare_data(name, Linkage::Export, true)
+            .declare_data(name, Linkage::Export, true, None)
             .map_err(|e| e.to_string())?;
 
         self.module
@@ -265,12 +271,12 @@ impl JIT {
     }
 
     // Translate from toy-language AST nodes into Cranelift IR.
-    fn translate(&mut self, ast: Ast) -> Result<(), String> {
+    fn translate(&mut self, ast: &Ast) -> Result<(), String> {
         // Our toy language currently only supports I64 values, though Cranelift
         // supports other types.
         let double = self.module.target_config().pointer_type();
         let mut parameter_names = vec![];
-        Self::get_parameters(&ast, &mut parameter_names);
+        Self::get_parameters(ast, &mut parameter_names);
         parameter_names.sort_unstable();
         parameter_names.dedup();
         for (i, param_name) in parameter_names.iter().enumerate() {
@@ -386,17 +392,17 @@ impl<'a> FunctionTranslator<'a> {
             Ast::Exp(ref left, ref right) => {
                 let lhs = self.translate_expr(left);
                 let rhs = self.translate_expr(right);
-                self.translate_call(POW, vec![lhs, rhs])
+                self.translate_call(POW, &[lhs, rhs])
             }
             _ => self.builder.ins().f64const(Ieee64::with_float(0.0)),
         }
     }
 
-    fn translate_call(&mut self, name: &str, args: Vec<Value>) -> Value {
+    fn translate_call(&mut self, name: &str, args: &[Value]) -> Value {
         let mut sig = self.module.make_signature();
 
         // Add a parameter for each argument.
-        for _arg in &args {
+        for _arg in args {
             sig.params.push(AbiParam::new(types::F64));
         }
 
@@ -418,7 +424,7 @@ impl<'a> FunctionTranslator<'a> {
     fn translate_global_data_addr(&mut self, name: String) -> Value {
         let sym = self
             .module
-            .declare_data(&name, Linkage::Export, true)
+            .declare_data(&name, Linkage::Export, true, None)
             .expect("problem declaring data object");
         let local_id = self
             .module
@@ -432,7 +438,7 @@ impl<'a> FunctionTranslator<'a> {
 fn declare_variables(
     int: types::Type,
     builder: &mut FunctionBuilder,
-    params: &Vec<&str>,
+    params: &[&str],
     stmts: &Ast,
     entry_ebb: Ebb,
 ) -> HashMap<String, Variable> {
@@ -442,9 +448,9 @@ fn declare_variables(
     for (i, name) in params.iter().enumerate() {
         // TODO: cranelift_frontend should really have an API to make it easy to set
         // up param variables.
-        let val = builder.ebb_params(entry_ebb)[i];
+        let value = builder.ebb_params(entry_ebb)[i];
         let var = declare_variable(types::F64, builder, &mut variables, &mut index, name);
-        builder.def_var(var, val);
+        builder.def_var(var, value);
     }
     let zero = builder.ins().f64const(Ieee64::with_float(0.0));
     let return_variable = declare_variable(
@@ -478,8 +484,7 @@ fn declare_variable(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::error::Error;
+    use super::HashMap;
     use std::process;
     use std::time::Instant;
 
@@ -497,7 +502,7 @@ mod tests {
         let foo_code = "(var1 + var2 * 3) / (2 + 3) - something";
 
         // Pass the string to the JIT, and it returns a raw pointer to machine code.
-        let foo = jit.compile(&foo_code).unwrap_or_else(|msg| {
+        let compiled_formula = jit.compile(&foo_code).unwrap_or_else(|msg| {
             dbg!(msg);
             process::exit(1);
         });
@@ -517,10 +522,14 @@ mod tests {
             dict.get_mut("var2").unwrap().push(20.0 + f64::from(i));
             dict.get_mut("something").unwrap().push(30.0 + f64::from(i));
         }
+        let dict2: HashMap<String, &[f64]> = dict
+            .iter_mut()
+            .map(|v| (v.0.to_owned(), v.1.as_slice()))
+            .collect();
         let watch = watch.elapsed();
 
         let watch2 = Instant::now();
-        let results = foo(dict, capacity);
+        let results = compiled_formula(dict2, capacity);
         let watch2 = watch2.elapsed();
 
         println!("{}", results[0]);
