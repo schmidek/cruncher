@@ -123,7 +123,7 @@ impl JIT {
                 Box::new(
                     move |_params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        for i in 0..number_of_evaluations {
+                        for _i in 0..number_of_evaluations {
                             results.push(function());
                         }
 
@@ -272,9 +272,6 @@ impl JIT {
 
     // Translate from toy-language AST nodes into Cranelift IR.
     fn translate(&mut self, ast: &Ast) -> Result<(), String> {
-        // Our toy language currently only supports I64 values, though Cranelift
-        // supports other types.
-        let double = self.module.target_config().pointer_type();
         let mut parameter_names = vec![];
         Self::get_parameters(ast, &mut parameter_names);
         parameter_names.sort_unstable();
@@ -320,11 +317,10 @@ impl JIT {
 
         // The toy language allows variables to be declared implicitly.
         // Walk the AST and declare all implicitly-declared variables.
-        let variables = declare_variables(double, &mut builder, &parameter_names, &ast, entry_ebb);
+        let variables = declare_variables(&mut builder, &parameter_names, &ast, entry_ebb);
 
         // Now translate the statements of the function body.
         let mut trans = FunctionTranslator {
-            double,
             builder,
             variables,
             module: &mut self.module,
@@ -351,7 +347,6 @@ impl JIT {
 /// A collection of state used for translating from toy-language AST nodes
 /// into Cranelift IR.
 struct FunctionTranslator<'a> {
-    double: types::Type,
     builder: FunctionBuilder<'a>,
     variables: HashMap<String, Variable>,
     module: &'a mut Module<SimpleJITBackend>,
@@ -436,7 +431,6 @@ impl<'a> FunctionTranslator<'a> {
 }
 
 fn declare_variables(
-    int: types::Type,
     builder: &mut FunctionBuilder,
     params: &[&str],
     stmts: &Ast,
@@ -449,17 +443,11 @@ fn declare_variables(
         // TODO: cranelift_frontend should really have an API to make it easy to set
         // up param variables.
         let value = builder.ebb_params(entry_ebb)[i];
-        let var = declare_variable(types::F64, builder, &mut variables, &mut index, name);
+        let var = declare_variable(builder, &mut variables, &mut index, name);
         builder.def_var(var, value);
     }
     let zero = builder.ins().f64const(Ieee64::with_float(0.0));
-    let return_variable = declare_variable(
-        types::F64,
-        builder,
-        &mut variables,
-        &mut index,
-        ".the_return",
-    );
+    let return_variable = declare_variable(builder, &mut variables, &mut index, ".the_return");
     builder.def_var(return_variable, zero);
 
     variables
@@ -467,7 +455,6 @@ fn declare_variables(
 
 /// Declare a single variable declaration.
 fn declare_variable(
-    int: types::Type,
     builder: &mut FunctionBuilder,
     variables: &mut HashMap<String, Variable>,
     index: &mut usize,

@@ -13,12 +13,9 @@ jit-compiled mathematical expression calculator
 edition = "2018"
 
 [dependencies]
-libm = ""
-lazy_static = "^1"
-cranelift = "^0.*"
-cranelift-module = "0.*"
-cranelift-simplejit = "0.*"
-# cranelift = "^0.26"
-# cranelift-module = "^0.26"
-# cranelift-simplejit = "^0.26"
+libm = "^0.1.4"
+lazy_static = "^1.3"
+cranelift = "^0.38"
+cranelift-module = "^0.38"
+cranelift-simplejit = "^0.38"
 hashbrown = "^0.5"
