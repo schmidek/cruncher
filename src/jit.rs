@@ -42,7 +42,7 @@ impl Default for JIT {
         }
 
         let mut builder = SimpleJITBuilder::new(cranelift_module::default_libcall_names());
-        let s = builder.symbol(POW, pow as *const u8);
+        let _s = builder.symbol(POW, pow as *const u8);
         let module = Module::new(builder);
         Self {
             builder_context: FunctionBuilderContext::new(),

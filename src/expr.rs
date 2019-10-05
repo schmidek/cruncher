@@ -97,7 +97,7 @@ impl Expr {
                 // If we have a context
                 .and_then(|c|
                     // and the context has a value for the variable name, use the value
-                    c.get(name).and_then(|v| Some(v.to_owned())))
+                    c.get(name).map(std::borrow::ToOwned::to_owned))
                 // Otherwise, we return an error
                 .ok_or_else(|| Error::NameError(format!("name '{}' is not defined", name))),
             Ast::Value(number) => Ok(number),

@@ -26,17 +26,17 @@ impl Op {
     /// evaluated first.
     pub fn precedence(self) -> u8 {
         match self {
-            Op::Plus | Op::Minus => 1,
-            Op::Mul | Op::Div => 2,
-            Op::Exp => 3,
+            Self::Plus | Self::Minus => 1,
+            Self::Mul | Self::Div => 2,
+            Self::Exp => 3,
         }
     }
 
     /// Check if the operator is left associative
     pub fn is_left_associative(self) -> bool {
         match self {
-            Op::Plus | Op::Minus | Op::Mul | Op::Div => true,
-            Op::Exp => false,
+            Self::Plus | Self::Minus | Self::Mul | Self::Div => true,
+            Self::Exp => false,
         }
     }
 

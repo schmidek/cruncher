@@ -13,8 +13,8 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         match *self {
-            Error::ParseError(ref message) => write!(fmt, "ParseError: {}", message),
-            Error::NameError(ref message) => write!(fmt, "NameError: {}", message),
+            Self::ParseError(ref message) => write!(fmt, "ParseError: {}", message),
+            Self::NameError(ref message) => write!(fmt, "NameError: {}", message),
         }
     }
 }
@@ -22,13 +22,13 @@ impl Display for Error {
 impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
-            Error::ParseError(ref message) | Error::NameError(ref message) => message,
+            Self::ParseError(ref message) | Self::NameError(ref message) => message,
         }
     }
 
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
-            Error::ParseError(_) | Error::NameError(_) => None,
+            Self::ParseError(_) | Self::NameError(_) => None,
         }
     }
 }
