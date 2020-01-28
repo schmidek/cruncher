@@ -81,14 +81,15 @@ extern crate lazy_static;
 
 mod ast;
 mod error;
-pub mod expr;
-pub mod jit;
+mod expr;
+mod jit;
 mod lexer;
 mod token;
 mod util;
 
-pub use error::Error;
+pub use jit::JIT;
 pub use expr::{eval, Expr};
+pub use error::Error;
 pub use lexer::is_variable;
 
 #[cfg(test)]

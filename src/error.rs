@@ -1,7 +1,7 @@
 use std::error;
 use std::fmt::{self, Display, Formatter};
 
-/// Error type for the caldyn crate
+/// Error types for cruncher
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     /// Error while parsing an expression
