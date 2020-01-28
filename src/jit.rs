@@ -35,6 +35,7 @@ pub struct JIT {
 }
 
 impl Default for JIT {
+    #[must_use]
     fn default() -> Self {
         // Windows calling conventions are not supported yet.
         if cfg!(windows) {
@@ -55,6 +56,7 @@ impl Default for JIT {
 }
 
 impl JIT {
+    #[must_use]
     /// Create a new `JIT` instance.
     pub fn new() -> Self {
         Self::default()
@@ -73,7 +75,7 @@ impl JIT {
             .map_err(|e| e.to_string())?;
 
         // Then, translate the AST nodes into Cranelift IR.
-        self.translate(&ast).map_err(|e| e.to_string())?;
+        self.translate(&ast)?;
 
         // Next, declare the function to simplejit. Functions must be declared
         // before they can be called, or defined.
