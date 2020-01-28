@@ -4,6 +4,7 @@ use crate::util::FUNCTIONS;
 use std::iter::Peekable;
 use std::str::Chars;
 
+#[must_use]
 /// Check if `ident` is a valid variable name
 ///
 /// # Examples
