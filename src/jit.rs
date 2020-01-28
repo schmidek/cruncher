@@ -2,11 +2,11 @@ use hashbrown::HashMap;
 
 use crate::ast::Ast;
 use crate::lexer::Lexer;
+use crate::error::Error;
 use cranelift::prelude::*;
 use cranelift_module::{DataContext, Linkage, Module};
 use cranelift_simplejit::{SimpleJITBackend, SimpleJITBuilder};
 use libm::pow;
-// use frontend::*;
 use std::mem;
 use std::slice;
 
@@ -66,13 +66,13 @@ impl JIT {
     pub fn compile(
         &mut self,
         input: &str,
-    ) -> Result<Box<dyn Fn(HashMap<String, &[f64]>, usize) -> Result<Vec<f64>, String>>, String> {
+    ) -> Result<Box<dyn Fn(HashMap<String, &[f64]>, usize) -> Result<Vec<f64>, Error>>, Error> {
         // First, parse the string, producing AST nodes.
         // let (name, params, the_return, stmts) =
         //     parser::function(&input).map_err(|e| e.to_string())?;
         let mut lexer = Lexer::new(input);
-        let ast = Ast::from_tokens(&mut lexer.parse().map_err(|e| e.to_string())?, "")
-            .map_err(|e| e.to_string())?;
+        let ast = Ast::from_tokens(&mut lexer.parse().map_err(|e| Error::ParseError(e.to_string()))?, "")
+            .map_err(|e| Error::ParseError(e.to_string()))?;
 
         // Then, translate the AST nodes into Cranelift IR.
         self.translate(&ast)?;
@@ -86,7 +86,7 @@ impl JIT {
         let id = self
             .module
             .declare_function(&input, Linkage::Export, &self.ctx.func.signature)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| Error::ParseError(e.to_string()))?;
 
         // Define the function to simplejit. This finishes compilation, although
         // there may be outstanding relocations to perform. Currently, simplejit
@@ -95,7 +95,7 @@ impl JIT {
         // below.
         self.module
             .define_function(id, &mut self.ctx)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| Error::ParseError(e.to_string()))?;
 
         // Now that compilation is finished, we can clear out the context state.
         self.module.clear_context(&mut self.ctx);
@@ -110,14 +110,14 @@ impl JIT {
 
         Ok(Self::dynamic_param_fn(
             code,
-            self.required_parameters.clone(),
+            &self.required_parameters,
         ))
     }
 
     fn dynamic_param_fn(
         function: *const u8,
-        required_parameters: HashMap<String, usize>,
-    ) -> Box<dyn Fn(HashMap<String, &[f64]>, usize) -> Result<Vec<f64>, String>> {
+        required_parameters: &HashMap<String, usize>,
+    ) -> Box<dyn Fn(HashMap<String, &[f64]>, usize) -> Result<Vec<f64>, Error>> {
         // FIXME: Make a macro that will define these for us, maybe up to 256 params
         let keys = required_parameters.keys();
         let mut sorted_keys = vec![];
@@ -147,12 +147,12 @@ impl JIT {
                 Box::new(
                     move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or(format!("Missing parameter: {}", &sorted_keys[0]))?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])))?;
 
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(format!("Missing data for parameter: {}", &sorted_keys[0]));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
                             }
                         }
 
@@ -169,13 +169,13 @@ impl JIT {
                 Box::new(
                     move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or(format!("Missing parameter: {}", &sorted_keys[0]))?;
-                        let param_2 = params.get(&sorted_keys[1]).ok_or(format!("Missing parameter: {}", &sorted_keys[1]))?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])))?;
+                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[1])))?;
 
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(format!("Missing data for parameter: {}", &sorted_keys[0]));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
                             }
                         }
 
@@ -192,14 +192,14 @@ impl JIT {
                 Box::new(
                     move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or(format!("Missing parameter: {}", &sorted_keys[0]))?;
-                        let param_2 = params.get(&sorted_keys[1]).ok_or(format!("Missing parameter: {}", &sorted_keys[1]))?;
-                        let param_3 = params.get(&sorted_keys[2]).ok_or(format!("Missing parameter: {}", &sorted_keys[2]))?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])))?;
+                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[1])))?;
+                        let param_3 = params.get(&sorted_keys[2]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[2])))?;
 
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(format!("Missing data for parameter: {}", &sorted_keys[0]));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
                             }
                         }
 
@@ -217,15 +217,15 @@ impl JIT {
                 Box::new(
                     move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or(format!("Missing parameter: {}", &sorted_keys[0]))?;
-                        let param_2 = params.get(&sorted_keys[1]).ok_or(format!("Missing parameter: {}", &sorted_keys[1]))?;
-                        let param_3 = params.get(&sorted_keys[2]).ok_or(format!("Missing parameter: {}", &sorted_keys[2]))?;
-                        let param_4 = params.get(&sorted_keys[3]).ok_or(format!("Missing parameter: {}", &sorted_keys[3]))?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])))?;
+                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[1])))?;
+                        let param_3 = params.get(&sorted_keys[2]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[2])))?;
+                        let param_4 = params.get(&sorted_keys[3]).ok_or_else(|| Error::NameError(format!("Missing parameter: {}", &sorted_keys[3])))?;
 
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(format!("Missing data for parameter: {}", &sorted_keys[0]));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
                             }
                         }
 
@@ -242,18 +242,18 @@ impl JIT {
     }
 
     /// Create a zero-initialized data section.
-    pub fn create_data(&mut self, name: &str, contents: Vec<u8>) -> Result<&[u8], String> {
+    pub fn create_data(&mut self, name: &str, contents: Vec<u8>) -> Result<&[u8], Error> {
         // The steps here are analogous to `compile`, except that data is much
         // simpler than functions.
         self.data_ctx.define(contents.into_boxed_slice());
         let id = self
             .module
             .declare_data(name, Linkage::Export, true, None)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| Error::NameError(e.to_string()))?;
 
         self.module
             .define_data(id, &self.data_ctx)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| Error::ParseError(e.to_string()))?;
         self.data_ctx.clear();
         self.module.finalize_definitions();
         let buffer = self.module.get_finalized_data(id);
@@ -282,7 +282,7 @@ impl JIT {
     }
 
     // Translate from toy-language AST nodes into Cranelift IR.
-    fn translate(&mut self, ast: &Ast) -> Result<(), String> {
+    fn translate(&mut self, ast: &Ast) -> Result<(), Error> {
         let mut parameter_names = vec![];
         Self::get_parameters(ast, &mut parameter_names);
         parameter_names.sort_unstable();
