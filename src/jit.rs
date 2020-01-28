@@ -152,7 +152,7 @@ impl JIT {
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
                             }
                         }
 
@@ -175,7 +175,7 @@ impl JIT {
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
                             }
                         }
 
@@ -199,7 +199,7 @@ impl JIT {
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
                             }
                         }
 
@@ -225,7 +225,7 @@ impl JIT {
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", &sorted_keys[0])));
+                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
                             }
                         }
 
