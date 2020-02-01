@@ -87,9 +87,9 @@ mod lexer;
 mod token;
 mod util;
 
-pub use jit::JIT;
-pub use expr::{eval, Expr};
 pub use error::Error;
+pub use expr::{eval, Expr};
+pub use jit::JIT;
 pub use lexer::is_variable;
 
 #[cfg(test)]

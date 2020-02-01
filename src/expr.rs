@@ -179,34 +179,33 @@ mod tests {
         );
     }
 
-    // use std::time::Instant;
-    //
-    // #[test]
-    // fn bench() {
-    //     let watch = Instant::now();
-    //     let t = Expr::parse("(var1 + var2 * 3) / (2 + 3) - something").unwrap();
-    //     let capacity = 5_000_000;
-    //     let iterations = 5_000_000;
-    //     let mut dicts = Vec::with_capacity(capacity);
-    //     for i in 1..=iterations {
-    //         let mut dict: HashMap<String, f64> = HashMap::with_capacity(3);
-    //         dict.insert("var1".to_owned(), 10.0 + f64::from(i));
-    //         dict.insert("var2".to_owned(), 20.0 + f64::from(i));
-    //         dict.insert("something".to_owned(), 30.0 + f64::from(i));
-    //         dicts.push(dict);
-    //     }
-    //     let watch = watch.elapsed();
+    use std::time::Instant;
+    #[test]
+    fn bench() {
+        let watch = Instant::now();
+        let t = Expr::parse("(var1 + var2 * 3) / (2 + 3) - something").unwrap();
+        let capacity = 5_000_000;
+        let iterations = 5_000_000;
+        let mut dicts = Vec::with_capacity(capacity);
+        for i in 1..=iterations {
+            let mut dict: HashMap<String, f64> = HashMap::with_capacity(3);
+            dict.insert("var1".to_owned(), 10.0 + f64::from(i));
+            dict.insert("var2".to_owned(), 20.0 + f64::from(i));
+            dict.insert("something".to_owned(), 30.0 + f64::from(i));
+            dicts.push(dict);
+        }
+        let watch = watch.elapsed();
 
-    //     let mut results: Vec<f64> = Vec::with_capacity(capacity);
+        let mut results: Vec<f64> = Vec::with_capacity(capacity);
 
-    //     let watch2 = Instant::now();
-    //     for dict in &dicts {
-    //         results.push(t.eval(dict).unwrap());
-    //     }
-    //     let watch2 = watch2.elapsed();
+        let watch2 = Instant::now();
+        for dict in &dicts {
+            results.push(t.eval(dict).unwrap());
+        }
+        let watch2 = watch2.elapsed();
 
-    //     println!("{}", results[0]);
-    //     println!("{}", watch.as_millis());
-    //     println!("{}", watch2.as_millis());
-    // }
+        println!("{}", results[0]);
+        println!("{}", watch.as_millis());
+        println!("{}", watch2.as_millis());
+    }
 }

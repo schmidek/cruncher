@@ -51,3 +51,6 @@ cranelift = "^0.56"
 cranelift-module = "^0.56"
 cranelift-simplejit = "^0.56"
 hashbrown = "^0.6"
+
+[dev-dependencies]
+test-case = "^1"

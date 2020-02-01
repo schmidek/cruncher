@@ -175,6 +175,14 @@ fn is_variable_part(c: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::token::{Op, Token};
+    use test_case::test_case;
+
+    #[test_case("2 + 2" => Ok(vec![Token::Value("2".to_string()), Token::Value("2".to_string()), Token::Op(Op::Plus)]) ; "addition is parsed properly")]
+    #[test_case("2+2" => Ok(vec![Token::Value("2".to_string()), Token::Value("2".to_string()), Token::Op(Op::Plus)]) ; "inconclusive -- spaces are parsed properly")]
+    fn parse(equation: &str) -> Result<Vec<Token>, Error> {
+        Lexer::new(equation).parse()
+    }
 
     #[test]
     fn idents() {
