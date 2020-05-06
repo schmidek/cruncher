@@ -12,7 +12,7 @@ use std::slice;
 
 const POW: &str = "pow";
 
-type ReturnFunction = dyn Fn(HashMap<String, &[f64]>, usize) -> Result<Vec<f64>, Error>;
+type ReturnFunction = dyn Fn(&HashMap<String, &[f64]>, usize) -> Result<Vec<f64>, Error>;
 
 /// The basic JIT class.
 pub struct JIT {
@@ -65,10 +65,7 @@ impl JIT {
     }
 
     /// Compile a string in the toy language into machine code.
-    pub fn compile(
-        &mut self,
-        input: &str,
-    ) -> Result<Box<ReturnFunction>, Error> {
+    pub fn compile(&mut self, input: &str) -> Result<Box<ReturnFunction>, Error> {
         // First, parse the string, producing AST nodes.
         // let (name, params, the_return, stmts) =
         //     parser::function(&input).map_err(|e| e.to_string())?;
@@ -137,7 +134,7 @@ impl JIT {
             0 => {
                 let function = unsafe { mem::transmute::<_, fn() -> f64>(function) };
                 Box::new(
-                    move |_params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
+                    move |_params: &HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
                         // We don't just assume this will return the same value in case someone is using a random number generator in a custom function or something similar
                         for _i in 0..number_of_evaluations {
@@ -150,13 +147,18 @@ impl JIT {
             1 => {
                 let function = unsafe { mem::transmute::<_, fn(f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
+                    move |params: &HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])) })?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[0]))
+                        })?;
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
+                                return Err(Error::NameError(format!(
+                                    "Missing data for parameter: {}",
+                                    k
+                                )));
                             }
                         }
                         for i in 0..number_of_evaluations {
@@ -169,14 +171,21 @@ impl JIT {
             2 => {
                 let function = unsafe { mem::transmute::<_, fn(f64, f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
+                    move |params: &HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])) })?;
-                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[1])) })?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[0]))
+                        })?;
+                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[1]))
+                        })?;
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
+                                return Err(Error::NameError(format!(
+                                    "Missing data for parameter: {}",
+                                    k
+                                )));
                             }
                         }
                         for i in 0..number_of_evaluations {
@@ -189,15 +198,24 @@ impl JIT {
             3 => {
                 let function = unsafe { mem::transmute::<_, fn(f64, f64, f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
+                    move |params: &HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])) })?;
-                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[1])) })?;
-                        let param_3 = params.get(&sorted_keys[2]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[2])) })?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[0]))
+                        })?;
+                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[1]))
+                        })?;
+                        let param_3 = params.get(&sorted_keys[2]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[2]))
+                        })?;
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
+                                return Err(Error::NameError(format!(
+                                    "Missing data for parameter: {}",
+                                    k
+                                )));
                             }
                         }
                         for i in 0..number_of_evaluations {
@@ -211,16 +229,27 @@ impl JIT {
                 let function =
                     unsafe { mem::transmute::<_, fn(f64, f64, f64, f64) -> f64>(function) };
                 Box::new(
-                    move |params: HashMap<String, &[f64]>, number_of_evaluations: usize| {
+                    move |params: &HashMap<String, &[f64]>, number_of_evaluations: usize| {
                         let mut results: Vec<f64> = Vec::with_capacity(number_of_evaluations);
-                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[0])) })?;
-                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[1])) })?;
-                        let param_3 = params.get(&sorted_keys[2]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[2])) })?;
-                        let param_4 = params.get(&sorted_keys[3]).ok_or_else(|| { Error::NameError(format!("Missing parameter: {}", &sorted_keys[3])) })?;
+                        let param_1 = params.get(&sorted_keys[0]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[0]))
+                        })?;
+                        let param_2 = params.get(&sorted_keys[1]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[1]))
+                        })?;
+                        let param_3 = params.get(&sorted_keys[2]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[2]))
+                        })?;
+                        let param_4 = params.get(&sorted_keys[3]).ok_or_else(|| {
+                            Error::NameError(format!("Missing parameter: {}", &sorted_keys[3]))
+                        })?;
                         // Ensure all the slices have at least as much data as necessary to do the requested number of evaluations
                         for k in &sorted_keys {
                             if number_of_evaluations > params[k].len() {
-                                return Err(Error::NameError(format!("Missing data for parameter: {}", k)));
+                                return Err(Error::NameError(format!(
+                                    "Missing data for parameter: {}",
+                                    k
+                                )));
                             }
                         }
                         for i in 0..number_of_evaluations {
@@ -477,6 +506,7 @@ fn declare_variable(
 #[cfg(test)]
 mod tests {
     use super::HashMap;
+    use crate::jit::ReturnFunction;
     use std::process;
     use std::time::Instant;
 
@@ -491,18 +521,21 @@ mod tests {
         // it was assigned when the function exits. Note that there are multiple
         // assignments, so the input is not in SSA form, but that's ok because
         // Cranelift handles all the details of translating into SSA form itself.
-        let foo_code = "(var1 + var2 * 3) / (2 + 3) - something";
+        let compiled_formulas: Vec<Box<ReturnFunction>> = vec![
+            "(var1 + var2 * 3) / (2 + 3) - something",
+            "(var1 - var2 / 3) * (2 - 3) + something",
+            "(var1 - var2 + 3) / (2 / 3) + something",
+        ]
+        .into_iter()
+        .map(|formula_string| {
+            // Pass the string to the JIT, and it returns a pointer to machine code.
+            jit.compile(formula_string).unwrap_or_else(|msg| {
+                dbg!(msg);
+                process::exit(1);
+            })
+        })
+        .collect();
 
-        // Pass the string to the JIT, and it returns a raw pointer to machine code.
-        let compiled_formula = jit.compile(&foo_code).unwrap_or_else(|msg| {
-            dbg!(msg);
-            process::exit(1);
-        });
-
-        // And now we can call it!
-        // assert_eq!(-16.2, foo(31.0, 11.0, 21.0));
-
-        // let t = Expr::parse("(var1 + var2 * 3) / (2 + 3) - something").unwrap();
         let mut dict: HashMap<String, Vec<f64>> = HashMap::with_capacity(3);
         let capacity = 5_000_000;
         let iterations = 5_000_000;
@@ -520,11 +553,16 @@ mod tests {
             .collect();
         let watch = watch.elapsed();
 
+        let mut results = vec![];
+
         let watch2 = Instant::now();
-        let results = compiled_formula(dict2, capacity);
+        for compiled_formula in compiled_formulas {
+            let result = compiled_formula(&dict2, capacity);
+            results.push(result);
+        }
         let watch2 = watch2.elapsed();
 
-        match results {
+        match &results[0] {
             Ok(results) => println!("{}", results[0]),
             Err(msg) => println!("{}", msg),
         }

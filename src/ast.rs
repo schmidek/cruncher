@@ -146,7 +146,7 @@ impl Ast {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Ast;
     use crate::lexer::Lexer;
 
     #[test]

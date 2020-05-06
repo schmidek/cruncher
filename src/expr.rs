@@ -123,8 +123,7 @@ impl Expr {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::error::Error;
+    use super::{Expr, HashMap};
 
     #[test]
     fn parse() {
@@ -169,13 +168,13 @@ mod tests {
 
         let result = super::eval("2 * z", &context);
         assert_eq!(
-            result.err().unwrap().description(),
-            "name 'z' is not defined"
+            result.err().unwrap().to_string(),
+            "NameError: name 'z' is not defined"
         );
         let result = super::eval("2 * a", None);
         assert_eq!(
-            result.err().unwrap().description(),
-            "name 'a' is not defined"
+            result.err().unwrap().to_string(),
+            "NameError: name 'a' is not defined"
         );
     }
 

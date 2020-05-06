@@ -174,7 +174,10 @@ fn is_variable_part(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        is_value_part, is_value_start, is_variable, is_variable_part, is_variable_start, Error,
+        Lexer,
+    };
     use crate::token::{Op, Token};
     use test_case::test_case;
 
