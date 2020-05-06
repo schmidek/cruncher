@@ -14,7 +14,7 @@ use hashbrown::HashMap;
 /// # use hashbrown::HashMap;
 /// use cruncher::{eval};
 ///
-/// assert_eq!(eval("45 - 2^3", None), Ok(37.0));
+/// assert_eq!(eval("45 - 2^3", &HashMap::new()), Ok(37.0));
 ///
 /// let mut context :HashMap<String,f64> = HashMap::new();
 /// context.insert("a".into(), -5.0);
@@ -22,7 +22,7 @@ use hashbrown::HashMap;
 /// ```
 pub fn eval<'a, C>(input: &str, context: C) -> Result<f64, Error>
 where
-    C: Into<Option<&'a HashMap<String, f64>>>,
+    C: Into<&'a HashMap<String, f64>>,
 {
     Expr::parse(input).and_then(|expr| expr.eval(context))
 }
@@ -34,7 +34,7 @@ where
 /// # use cruncher::{Expr};
 /// # use hashbrown::HashMap;
 /// let expr = Expr::parse("3 + 5 * 2").unwrap();
-/// assert_eq!(expr.eval(None), Ok(13.0));
+/// assert_eq!(expr.eval(&HashMap::new()), Ok(13.0));
 ///
 /// let mut context :HashMap<String,f64> = HashMap::new();
 /// context.insert("a".into(), 42.0);
@@ -74,7 +74,7 @@ impl Expr {
     /// # use cruncher::{Expr};
     /// # use hashbrown::HashMap;
     /// let expr = Expr::parse("3 + 5 * 2").unwrap();
-    /// assert_eq!(expr.eval(None), Ok(13.0));
+    /// assert_eq!(expr.eval(&HashMap::new()), Ok(13.0));
     ///
     /// let expr = Expr::parse("3 + a").unwrap();
     ///
@@ -86,20 +86,22 @@ impl Expr {
     /// ```
     pub fn eval<'a, C>(&self, context: C) -> Result<f64, Error>
     where
-        C: Into<Option<&'a HashMap<String, f64>>>,
+        C: Into<&'a HashMap<String, f64>>,
     {
         Self::inner_eval(&self.ast, context.into())
     }
 
-    fn inner_eval(ast: &Ast, context: Option<&HashMap<String, f64>>) -> Result<f64, Error> {
+    fn inner_eval(ast: &Ast, context: &HashMap<String, f64>) -> Result<f64, Error> {
         match *ast {
-            Ast::Variable(ref name) => context
-                // If we have a context
-                .and_then(|c|
-                    // and the context has a value for the variable name, use the value
-                    c.get(name).map(std::borrow::ToOwned::to_owned))
-                // Otherwise, we return an error
-                .ok_or_else(|| Error::NameError(format!("name '{}' is not defined", name))),
+            Ast::Variable(ref name) =>
+            // if the context has a value for the variable name, use the value
+            {
+                context
+                    .get(name)
+                    .map(std::borrow::ToOwned::to_owned)
+                    // Otherwise, we return an error
+                    .ok_or_else(|| Error::NameError(format!("name '{}' is not defined", name)))
+            }
             Ast::Value(number) => Ok(number),
             Ast::Add(ref left, ref right) => {
                 Ok(Self::inner_eval(left, context)? + Self::inner_eval(right, context)?)
@@ -146,21 +148,23 @@ mod tests {
         context.insert("a".into(), 1.0);
         context.insert("b".into(), 2.0);
 
+        let empty_context = &HashMap::new();
+
         let eval_pairs = [
-            ("3 + 5", None, 8.0),
-            ("2 - 5", None, -3.0),
-            ("2 * 5", None, 10.0),
-            ("10 / 5", None, 2.0),
-            ("2 ^ 3", None, 8.0),
-            ("-3", None, -3.0),
-            ("25 + -3", None, 22.0),
-            ("25 - -3", None, 28.0),
-            ("25 - -3", None, 28.0),
-            ("3 + 5 * 2", None, 13.0),
-            ("sqrt(9)", None, 3.0),
-            ("sin(18.0) * 3", None, 3.0 * f64::sin(18.0)),
-            ("2 * a", Some(&context), 2.0),
-            ("(a + b)^2", Some(&context), 9.0),
+            ("3 + 5", empty_context, 8.0),
+            ("2 - 5", empty_context, -3.0),
+            ("2 * 5", empty_context, 10.0),
+            ("10 / 5", empty_context, 2.0),
+            ("2 ^ 3", empty_context, 8.0),
+            ("-3", empty_context, -3.0),
+            ("25 + -3", empty_context, 22.0),
+            ("25 - -3", empty_context, 28.0),
+            ("25 - -3", empty_context, 28.0),
+            ("3 + 5 * 2", empty_context, 13.0),
+            ("sqrt(9)", empty_context, 3.0),
+            ("sin(18.0) * 3", empty_context, 3.0 * f64::sin(18.0)),
+            ("2 * a", &context, 2.0),
+            ("(a + b)^2", &context, 9.0),
         ];
         for eval_pair in &eval_pairs {
             assert_eq!(super::eval(eval_pair.0, eval_pair.1), Ok(eval_pair.2));
@@ -171,7 +175,7 @@ mod tests {
             result.err().unwrap().to_string(),
             "NameError: name 'z' is not defined"
         );
-        let result = super::eval("2 * a", None);
+        let result = super::eval("2 * a", empty_context);
         assert_eq!(
             result.err().unwrap().to_string(),
             "NameError: name 'a' is not defined"

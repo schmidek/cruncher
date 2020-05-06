@@ -12,7 +12,8 @@
 //! [`eval`](fn.eval.html) function:
 //!
 //! ```
-//! assert_eq!(cruncher::eval("3 + 5 * 2", None), Ok(13.0));
+//! use hashbrown::HashMap;
+//! assert_eq!(cruncher::eval("3 + 5 * 2", &HashMap::new()), Ok(13.0));
 //! ```
 //!
 //! The second argument to `eval` is a [`HashMap`](struct.HashMap.html), that
@@ -35,7 +36,7 @@
 //! use cruncher::{Expr};
 //!
 //! let expr = Expr::parse("3 + 5 * 2").unwrap();
-//! assert_eq!(expr.eval(None), Ok(13.0));
+//! assert_eq!(expr.eval(&HashMap::new()), Ok(13.0));
 //!
 //! let expr = Expr::parse("3 / c + b").unwrap();
 //! let mut context :HashMap<String,f64> = HashMap::new();
