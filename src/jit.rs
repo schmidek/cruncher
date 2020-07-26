@@ -4,6 +4,7 @@ use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::Lexer;
 use cranelift::prelude::*;
+use cranelift_codegen::binemit::NullTrapSink;
 use cranelift_module::{DataContext, Linkage, Module};
 use cranelift_simplejit::{SimpleJITBackend, SimpleJITBuilder};
 use libm::pow;
@@ -92,13 +93,15 @@ impl JIT {
             .declare_function(&input, Linkage::Export, &self.ctx.func.signature)
             .map_err(|e| Error::ParseError(e.to_string()))?;
 
+        let trap_sink = &mut NullTrapSink {};
+
         // Define the function to simplejit. This finishes compilation, although
         // there may be outstanding relocations to perform. Currently, simplejit
         // cannot finish relocations until all functions to be called are
         // defined. For this toy demo for now, we'll just finalize the function
         // below.
         self.module
-            .define_function(id, &mut self.ctx)
+            .define_function(id, &mut self.ctx, trap_sink)
             .map_err(|e| Error::ParseError(e.to_string()))?;
 
         // Now that compilation is finished, we can clear out the context state.
@@ -271,7 +274,7 @@ impl JIT {
         self.data_ctx.define(contents.into_boxed_slice());
         let id = self
             .module
-            .declare_data(name, Linkage::Export, true, None)
+            .declare_data(name, Linkage::Export, true, false, None)
             .map_err(|e| Error::NameError(e.to_string()))?;
 
         self.module
@@ -333,25 +336,25 @@ impl JIT {
         let mut builder = FunctionBuilder::new(&mut self.ctx.func, &mut self.builder_context);
 
         // Create the entry block, to start emitting code in.
-        let entry_ebb = builder.create_ebb();
+        let entry_block = builder.create_block();
 
         // Since this is the entry block, add block parameters corresponding to
         // the function's parameters.
         //
         // TODO: Streamline the API here.
-        builder.append_ebb_params_for_function_params(entry_ebb);
+        builder.append_block_params_for_function_params(entry_block);
 
         // Tell the builder to emit code in this block.
-        builder.switch_to_block(entry_ebb);
+        builder.switch_to_block(entry_block);
 
         // And, tell the builder that this block will have no further
         // predecessors. Since it's the entry block, it won't have any
         // predecessors.
-        builder.seal_block(entry_ebb);
+        builder.seal_block(entry_block);
 
         // The toy language allows variables to be declared implicitly.
         // Walk the AST and declare all implicitly-declared variables.
-        let variables = declare_variables(&mut builder, &parameter_names, &ast, entry_ebb);
+        let variables = declare_variables(&mut builder, &parameter_names, &ast, entry_block);
 
         // Now translate the statements of the function body.
         let mut trans = FunctionTranslator {
@@ -453,7 +456,7 @@ impl<'a> FunctionTranslator<'a> {
     fn translate_global_data_addr(&mut self, name: String) -> Value {
         let sym = self
             .module
-            .declare_data(&name, Linkage::Export, true, None)
+            .declare_data(&name, Linkage::Export, true, false, None)
             .expect("problem declaring data object");
         let local_id = self
             .module
@@ -468,7 +471,7 @@ fn declare_variables(
     builder: &mut FunctionBuilder,
     params: &[&str],
     stmts: &Ast,
-    entry_ebb: Ebb,
+    entry_block: Block,
 ) -> HashMap<String, Variable> {
     let mut variables = HashMap::new();
     let mut index = 0;
@@ -476,7 +479,7 @@ fn declare_variables(
     for (i, name) in params.iter().enumerate() {
         // TODO: cranelift_frontend should really have an API to make it easy to set
         // up param variables.
-        let value = builder.ebb_params(entry_ebb)[i];
+        let value = builder.block_params(entry_block)[i];
         let var = declare_variable(builder, &mut variables, &mut index, name);
         builder.def_var(var, value);
     }
