@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use crate::ast::Ast;
 use crate::lexer::Lexer;
 use crate::Error;
+use std::collections::{HashMap, HashSet};
 
 /// Evaluate a single expression from `input`.
 ///
@@ -121,11 +121,60 @@ impl Expr {
             Ast::Function(ref func, ref arg) => Ok(func(Self::inner_eval(arg, context)?)),
         }
     }
+
+    /// Parse the given mathematical `expression` into an `Expr`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use cruncher::{Expr};
+    /// # use std::collections::{HashMap, HashSet};
+    /// let expr = Expr::parse("3 + 5 * 2").unwrap();
+    /// assert_eq!(expr.variables(), HashSet::new());
+    ///
+    /// let expr = Expr::parse("3 + a").unwrap();
+    /// assert_eq!(expr.variables(), HashSet::from(["a"]));
+    /// ```
+    pub fn variables(&self) -> HashSet<&str> {
+        let mut variables = HashSet::new();
+        Self::inner_variables(&self.ast, &mut variables);
+        variables
+    }
+
+    fn inner_variables<'a>(ast: &'a Ast, variables: &mut HashSet<&'a str>) {
+        match *ast {
+            Ast::Variable(ref name) => {
+                variables.insert(name);
+            }
+            Ast::Value(_number) => {}
+            Ast::Add(ref left, ref right) => {
+                Self::inner_variables(left, variables);
+                Self::inner_variables(right, variables);
+            }
+            Ast::Sub(ref left, ref right) => {
+                Self::inner_variables(left, variables);
+                Self::inner_variables(right, variables);
+            }
+            Ast::Mul(ref left, ref right) => {
+                Self::inner_variables(left, variables);
+                Self::inner_variables(right, variables);
+            }
+            Ast::Div(ref left, ref right) => {
+                Self::inner_variables(left, variables);
+                Self::inner_variables(right, variables);
+            }
+            Ast::Exp(ref left, ref right) => {
+                Self::inner_variables(left, variables);
+                Self::inner_variables(right, variables);
+            }
+            _ => {}
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Expr, HashMap};
+    use std::collections::HashSet;
 
     #[test]
     fn parse() {
@@ -180,6 +229,12 @@ mod tests {
             result.err().unwrap().to_string(),
             "NameError: name 'a' is not defined"
         );
+    }
+
+    #[test]
+    fn variables() {
+        let expr = Expr::parse("(a + b)^2").unwrap();
+        assert_eq!(expr.variables(), HashSet::from(["a", "b"]));
     }
 
     use std::time::Instant;
