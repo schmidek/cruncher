@@ -1,5 +1,4 @@
-use hashbrown::HashMap;
-
+use std::collections::HashMap;
 use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::Lexer;

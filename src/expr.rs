@@ -1,7 +1,7 @@
+use std::collections::HashMap;
 use crate::ast::Ast;
 use crate::lexer::Lexer;
 use crate::Error;
-use hashbrown::HashMap;
 
 /// Evaluate a single expression from `input`.
 ///
@@ -11,7 +11,7 @@ use hashbrown::HashMap;
 /// # Example
 ///
 /// ```
-/// # use hashbrown::HashMap;
+
 /// use cruncher::{eval};
 ///
 /// assert_eq!(eval("45 - 2^3", &HashMap::new()), Ok(37.0));
@@ -32,7 +32,7 @@ where
 /// # Examples
 /// ```
 /// # use cruncher::{Expr};
-/// # use hashbrown::HashMap;
+/// # use std::collections::HashMap;
 /// let expr = Expr::parse("3 + 5 * 2").unwrap();
 /// assert_eq!(expr.eval(&HashMap::new()), Ok(13.0));
 ///
@@ -72,7 +72,7 @@ impl Expr {
     ///
     /// ```
     /// # use cruncher::{Expr};
-    /// # use hashbrown::HashMap;
+    /// # use std::collections::HashMap;
     /// let expr = Expr::parse("3 + 5 * 2").unwrap();
     /// assert_eq!(expr.eval(&HashMap::new()), Ok(13.0));
     ///

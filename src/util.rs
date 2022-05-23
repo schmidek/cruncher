@@ -1,4 +1,4 @@
-use hashbrown::HashMap;
+use std::collections::HashMap;
 
 lazy_static! {
     pub static ref FUNCTIONS: HashMap<String, fn(f64) -> f64> = {
