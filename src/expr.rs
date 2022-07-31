@@ -166,6 +166,9 @@ impl Expr {
                 Self::inner_variables(left, variables);
                 Self::inner_variables(right, variables);
             }
+            Ast::Function(_, ref right) => {
+                Self::inner_variables(right, variables);
+            }
             _ => {}
         }
     }
@@ -235,6 +238,9 @@ mod tests {
     fn variables() {
         let expr = Expr::parse("(a + b)^2").unwrap();
         assert_eq!(expr.variables(), HashSet::from(["a", "b"]));
+
+        let expr = Expr::parse("a * ln(b + c)").unwrap();
+        assert_eq!(expr.variables(), HashSet::from(["a", "b", "c"]));
     }
 
     use std::time::Instant;
