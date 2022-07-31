@@ -12,7 +12,7 @@
 //! [`eval`](fn.eval.html) function:
 //!
 //! ```
-//! use hashbrown::HashMap;
+//! use std::collections::HashMap;
 //! assert_eq!(cruncher::eval("3 + 5 * 2", &HashMap::new()), Ok(13.0));
 //! ```
 //!
@@ -20,7 +20,7 @@
 //! can define variables:
 //!
 //! ```
-//! use hashbrown::HashMap;
+//! use std::collections::HashMap;
 //!
 //! let mut context :HashMap<String,f64> = HashMap::new();
 //! context.insert("a".into(), 3.5);
@@ -32,7 +32,7 @@
 //! the same expression with different values for variables.
 //!
 //! ```
-//! use hashbrown::HashMap;
+//! use std::collections::HashMap;
 //! use cruncher::{Expr};
 //!
 //! let expr = Expr::parse("3 + 5 * 2").unwrap();

@@ -11,8 +11,8 @@ use std::collections::{HashMap, HashSet};
 /// # Example
 ///
 /// ```
-
-/// use cruncher::{eval};
+/// # use std::collections::HashMap;
+/// # use cruncher::{eval};
 ///
 /// assert_eq!(eval("45 - 2^3", &HashMap::new()), Ok(37.0));
 ///
