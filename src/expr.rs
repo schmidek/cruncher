@@ -59,9 +59,16 @@ impl Expr {
     /// ```
     pub fn parse(expression: &str) -> Result<Self, Error> {
         let mut lexer = Lexer::new(expression);
+        let mut tokens= lexer.parse()?;
 
-        match Ast::from_tokens(&mut lexer.parse()?, "") {
-            Ok(ast) => Ok(Self { ast }),
+        match Ast::from_tokens(&mut tokens, "") {
+            Ok(ast) => {
+                if tokens.is_empty() {
+                    Ok(Self { ast })
+                }else{
+                    Err(Error::ParseError(format!("unexpected tokens {:?}", tokens)))
+                }
+            },
             Err(err) => Err(err),
         }
     }
@@ -236,6 +243,11 @@ mod tests {
             result.err().unwrap().to_string(),
             "NameError: name 'a' is not defined"
         );
+    }
+
+    #[test]
+    fn invalid() {
+        assert!(Expr::parse("nonexistent(x)").is_err());
     }
 
     #[test]
