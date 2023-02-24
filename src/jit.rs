@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::ast::Ast;
 use crate::error::Error;
 use crate::lexer::Lexer;
@@ -7,6 +6,7 @@ use cranelift_codegen::binemit::NullTrapSink;
 use cranelift_module::{DataContext, Linkage, Module};
 use cranelift_simplejit::{SimpleJITBackend, SimpleJITBuilder};
 use libm::pow;
+use std::collections::HashMap;
 use std::mem;
 use std::slice;
 

@@ -140,6 +140,10 @@ impl Expr {
         variables
     }
 
+    pub fn ast(&self) -> &Ast {
+        &self.ast
+    }
+
     fn inner_variables<'a>(ast: &'a Ast, variables: &mut HashSet<&'a str>) {
         match *ast {
             Ast::Variable(ref name) => {
