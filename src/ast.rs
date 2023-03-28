@@ -2,9 +2,10 @@ use crate::error::Error;
 use crate::lexer::is_variable;
 use crate::token::{Op, Token};
 use crate::util::FUNCTIONS;
+use std::hash::{Hash, Hasher};
 
 /// Ast nodes for the expressions
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Ast {
     /// A variable, to be resolved later
     Variable(String),
@@ -22,6 +23,68 @@ pub enum Ast {
     Exp(Box<Ast>, Box<Ast>),
     /// fn(<arg>)
     Function(fn(f64) -> f64, Box<Ast>),
+}
+
+impl PartialEq<Self> for Ast {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Ast::Variable(str), Ast::Variable(str2)) => str == str2,
+            (Ast::Value(v), Ast::Value(v2)) => v.to_le_bytes() == v2.to_le_bytes(),
+            (Ast::Add(a, b), Ast::Add(a2, b2)) => a == a2 && b == b2,
+            (Ast::Sub(a, b), Ast::Sub(a2, b2)) => a == a2 && b == b2,
+            (Ast::Mul(a, b), Ast::Mul(a2, b2)) => a == a2 && b == b2,
+            (Ast::Div(a, b), Ast::Div(a2, b2)) => a == a2 && b == b2,
+            (Ast::Exp(a, b), Ast::Exp(a2, b2)) => a == a2 && b == b2,
+            (Ast::Function(a, b), Ast::Function(a2, b2)) => a == a2 && b == b2,
+            _ => false,
+        }
+    }
+}
+impl Eq for Ast {}
+
+impl Hash for Ast {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Ast::Variable(str) => {
+                state.write_u8(0);
+                str.hash(state)
+            }
+            Ast::Value(v) => {
+                state.write_u8(1);
+                v.to_le_bytes().hash(state)
+            }
+            Ast::Add(a, b) => {
+                state.write_u8(2);
+                a.hash(state);
+                b.hash(state);
+            }
+            Ast::Sub(a, b) => {
+                state.write_u8(3);
+                a.hash(state);
+                b.hash(state);
+            }
+            Ast::Mul(a, b) => {
+                state.write_u8(4);
+                a.hash(state);
+                b.hash(state);
+            }
+            Ast::Div(a, b) => {
+                state.write_u8(5);
+                a.hash(state);
+                b.hash(state);
+            }
+            Ast::Exp(a, b) => {
+                state.write_u8(6);
+                a.hash(state);
+                b.hash(state);
+            }
+            Ast::Function(a, b) => {
+                state.write_u8(7);
+                a.hash(state);
+                b.hash(state);
+            }
+        }
+    }
 }
 
 impl Ast {

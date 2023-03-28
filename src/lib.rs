@@ -88,9 +88,9 @@ mod lexer;
 mod token;
 mod util;
 
+pub use ast::Ast;
 pub use error::Error;
 pub use expr::{eval, Expr};
-pub use ast::Ast;
 pub use jit::JIT;
 pub use lexer::is_variable;
 pub use util::FUNCTIONS;

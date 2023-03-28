@@ -41,7 +41,7 @@ where
 /// let expr = Expr::parse("-2 * a").unwrap();
 /// assert_eq!(expr.eval(&context), Ok(-84.0));
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expr {
     ast: Ast,
 }
@@ -59,16 +59,16 @@ impl Expr {
     /// ```
     pub fn parse(expression: &str) -> Result<Self, Error> {
         let mut lexer = Lexer::new(expression);
-        let mut tokens= lexer.parse()?;
+        let mut tokens = lexer.parse()?;
 
         match Ast::from_tokens(&mut tokens, "") {
             Ok(ast) => {
                 if tokens.is_empty() {
                     Ok(Self { ast })
-                }else{
+                } else {
                     Err(Error::ParseError(format!("unexpected tokens {:?}", tokens)))
                 }
-            },
+            }
             Err(err) => Err(err),
         }
     }
@@ -180,7 +180,6 @@ impl Expr {
             Ast::Function(_, ref right) => {
                 Self::inner_variables(right, variables);
             }
-            _ => {}
         }
     }
 }
